@@ -1,0 +1,189 @@
+#include <iostream>
+#include "EasyBMP.h"
+#include <queue>
+#include <stdint.h>
+#include <stdlib.h>
+using namespace std;
+
+void colorToGray(BMP & Output) {//sets the color of the image
+  int picWidth = Output.TellWidth();
+  int picHeight = Output.TellHeight();
+  Output.SetBitDepth(1); //compression happens here for (int i = 0; i < picWidth-1; ++i)
+  for ( int i = 0; i < picWidth-1; ++i)
+    {
+      for (int j = 0; j < picHeight-1; ++j) { int col = 0.1* Output(i, j)->Blue +
+	  0.6*Output(i,j)->Green +0.3* Output(i,j)->Red;
+	if (col > 127)
+	  {
+	    Output(i,j)->Red = 255;
+	    Output(i,j)->Blue = 255;
+	    Output(i,j)->Green = 255;
+	  }
+      }
+    }
+}
+
+void BFS(BMP & input,int start, int destination, int count  )
+{
+  int x1;int y1;//start
+  int x2;int y2;//destination
+
+  y1 = start/input.TellWidth(); x1 = start % input.TellWidth();//(x1,y1) = start
+
+  y2 = destination/input.TellWidth(); x2 = destination % input.TellWidth();//(x2,y2) = destination
+
+  
+ 
+  queue<double> Q;
+  Q.push(start);//pushes start into the queue
+  count++;
+  
+  int numPixels = input.TellHeight() * input.TellWidth();
+  bool * visited = new bool[numPixels];
+  int inf = INT32_MAX;
+  
+   for (int i = 0; i < numPixels; ++i)
+    {
+      visited[i] = false;
+    }
+  int * distance = new int[numPixels];
+  for(int i = 0; i < numPixels; ++i)
+    {
+      distance[i] = numPixels * numPixels;
+    }
+
+  visited[start] = true;
+  distance[start] = 0;
+  
+  
+  
+  int * parent = new int[numPixels];
+    
+  //checks each pixel for being either black or white
+  for ( int i = 0; i < input.TellHeight(); i++)
+    {
+      for (int j = 0; j< input.TellWidth(); j++)
+	{
+	  int TotalColor = input(j,i)->Red + input(j,i)->Blue + input(j,i)->Green;
+	  if( TotalColor < 382)
+	    {
+	      //sets all pixels less than 382 to balck 
+	      input(j,i)->Red=0;
+	      input(j,i)->Blue=0;
+	      input(j,i)->Green=0;
+	      int q = input.TellWidth() * i + j;
+	      visited[q] = true;
+	      if(q == destination)
+		{
+		  cout<< "oops"<<endl;
+		  input(j,i)->Red=255;
+		  input(j,i)->Blue=255;
+		  input(j,i)->Green=0;
+		  
+		}
+	    }
+	  else
+	    {
+	      //sets all others to white
+	      input(j,i)->Red=255;
+	      input(j,i)->Blue=255;
+	      input(j,i)->Green=255;
+	    }
+	}
+      
+    }
+  //checks all neighboring pixels
+  while ( (Q.size() > 0) && visited[destination] == false)
+    {
+      
+      int u = Q.front();
+      int row = u / input.TellWidth();
+      int col = u % input.TellWidth();
+      int right = u + 1;
+      int left = u -1;
+      int top = u - input.TellWidth();
+      int bottom = u + input.TellWidth();
+      Q.pop();
+      if (row > 0 and !visited[top])
+	{
+	  visited[top] = true;
+	  distance[top] = distance [u]+ 1;
+	  parent[top] = u;
+	  Q.push(top);
+	  count++;
+	}
+      if (row < (input.TellHeight() + 1) and !visited[bottom] )
+	{
+	  visited[bottom] = true;
+	  distance[bottom] = distance [u]+1;
+	  parent[bottom] = u;
+	  Q.push(bottom);
+	  count++;
+	}
+
+      if (col > 0 and !visited[left] )
+	{
+	  visited[left] = true;
+	  distance[left] = distance [u]+1;
+	  parent[left] = u;
+	  Q.push(left);
+	  count++;
+	}
+
+      if (col < (input.TellWidth() + 1) and !visited[right])
+	{
+	  visited[right] = true;
+	  distance[right] = distance [u]+1;
+	  parent[right] = u;
+	  Q.push(right);
+	  count++;
+	}
+      
+    }
+  
+  if(visited[destination] == true) //goes backwards throught the line painting all pixels red
+    {
+      int v = destination;
+      
+      while ( v != start)
+	{
+	  int y6 = v/input.TellWidth(); int x6 = v % input.TellWidth();
+	  
+	  input(x6,y6)->Red = 255;
+	  input(x6,y6)->Blue= 0;
+	  input(x6,y6)->Green=0;
+	  
+	  v = parent[v];
+	      
+	}
+	  
+    }
+  else
+    cout << "There is no path between start and destination" << endl;
+  
+  cout << count <<endl;
+}
+
+int main()
+{
+  BMP image;
+  image.ReadFromFile("image2.bmp");
+  colorToGray(image);
+  image.SetBitDepth(8);
+  int widthMid = image.TellWidth() / 2;
+  int heightMid = image.TellHeight() /2;
+  
+  int start = heightMid * image.TellWidth() + widthMid;
+  int destination = widthMid + image.TellWidth() * (image.TellHeight()-1);
+  int count = 0;
+  int x = widthMid;
+  int y = image.TellWidth() * (image.TellHeight() - 1);
+  
+  BFS(image, start , destination , count);
+  
+  image.WriteToFile("FinalMaze2.bmp");
+  
+  return 0;
+
+}
+
